@@ -1,0 +1,70 @@
+services:
+    nginx:
+        image: nginx:latest
+        container_name: nginx
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./frontend/dist:/usr/share/nginx/html
+        ports:
+            - "80:80"
+        depends_on:
+            - frontend
+            - backend
+
+    backend:
+        build:
+            context: ./backend
+        container_name: backend
+        volumes:
+            - ./backend:/usr/src/app
+            - /usr/src/app/node_modules
+        environment:
+            - DATABASE_URL=${DATABASE_URL}
+        ports:
+            - "4000:4000"
+        depends_on:
+            - database
+
+    frontend:
+        build:
+            context: ./frontend
+        container_name: frontend
+        ports:
+            - "3000:3000"
+        volumes:
+            - ./frontend:/usr/src/app
+            - /usr/src/app/node_modules
+        environment:
+            - VITE_BACKEND_URL=http://localhost:4000
+        command: >
+            sh -c "pnpm install && pnpm run dev"
+
+    database:
+        image: postgres:latest
+        container_name: database
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: matcha
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+
+    prisma:
+        build:
+            context: ./prisma
+        container_name: prisma
+        working_dir: /usr/src/app
+        volumes:
+            - ./prisma:/usr/src/app
+        environment:
+            - DATABASE_URL=${DATABASE_URL}
+        command: [ "npx", "prisma", "studio" ]
+        depends_on:
+            - database
+        ports:
+            - "5555:5555"
+
+volumes:
+    postgres-data:

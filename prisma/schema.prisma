@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  username       String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  emailVerified  Boolean  @default(false)
+  biography      String?
+  birthDate      DateTime?
+  gender         String?
+  sexualPreference String?
+  location       Json?    // GPS position
+  manualLocation Boolean  @default(false)
+  fameRating     Float    @default(0.0)
+  isOnline       Boolean  @default(false)
+  lastActiveAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  profilePictures ProfilePicture[]
+  blockedBy       Block[]           @relation("BlockedByUsers")
+  blocks          Block[]           @relation("UserBlocks")
+  likes           Like[]            @relation("UserLikes")
+  likedBy         Like[]            @relation("LikedByUsers")
+  viewedBy        View[]            @relation("ViewedByUsers")
+  views           View[]            @relation("UserViews")
+  sentMessages    Message[]         @relation("SentMessages")
+  receivedMessages Message[]        @relation("ReceivedMessages")
+  notifications   Notification[]
+
+  @@index([email])
+  @@index([username])
+  @@index([birthDate])
+  @@index([fameRating])
+  @@index([gender])
+}
+
+model ProfilePicture {
+  id        String   @id @default(uuid())
+  userId    String
+  filePath  String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("profile_pictures")
+}
+
+model Like {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime @default(now())
+  fromUser   User     @relation("UserLikes", fields: [fromUserId], references: [id])
+  toUser     User     @relation("LikedByUsers", fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId])
+}
+
+model View {
+  id        String   @id @default(uuid())
+  viewerId  String
+  viewedId  String
+  createdAt DateTime @default(now())
+  viewed    User     @relation("ViewedByUsers", fields: [viewedId], references: [id])
+  viewer    User     @relation("UserViews", fields: [viewerId], references: [id])
+
+  @@unique([viewerId, viewedId])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   User     @relation("BlockedByUsers", fields: [blockedId], references: [id])
+  blocker   User     @relation("UserBlocks", fields: [blockerId], references: [id])
+
+  @@unique([blockerId, blockedId])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  content    String?
+  createdAt  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  content    String
+  createdAt  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  fromUser   User     @relation("SentMessages", fields: [fromUserId], references: [id])
+  toUser     User     @relation("ReceivedMessages", fields: [toUserId], references: [id])
+
+  @@index([fromUserId, toUserId])
+}
